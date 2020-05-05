@@ -1,0 +1,11 @@
+require("./data-access-layer/dal");
+const express = require("express");
+const cors = require("cors");
+const dishesController = require("./controllers/dish-controller");
+const recepsController = require("./controllers/receps-controller");
+const server = express();
+server.use(cors());
+server.use(express.json());
+server.use("/api/dishes", dishesController);
+server.use("/api/receps", recepsController);
+server.listen(3000, () => console.log("Listening on http://localhost:3000"));
