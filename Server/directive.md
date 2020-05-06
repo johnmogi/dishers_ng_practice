@@ -1,5 +1,14 @@
 תרגול Full Stack
 
+לתרגל בעתיד:
+
+0. convert design for test to bootstrap.
+1. look for initial form.
+1. global heading directive
+2. item links with routing for categories
+3. immediate update (look for anguar lesson)
+4. images in insert {BONUS}
+
 צרו אתר המציג מאכלים ומאפשר להוסיף מתכון למאכל.
 מסד הנתונים - MONGO:
 
@@ -45,7 +54,6 @@ POST http://localhost:3001/api/recipes
 • דוגמה אפשרית ל-UI המאפשר לבצע הכל בדף אחד:
 
 בהצלחה 
-
 
 INSERT INTO `dishes` (`dishID`, `dishName`) VALUES (NULL, 'Mario delight coconut');
 

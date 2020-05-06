@@ -1,0 +1,20 @@
+<div>
+    <table>
+        <thead>
+            <tr>
+                <th>Plate Name</th>
+                <th>Created by</th>
+                <th>Ingredients</th>
+                <th>How To Cook</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let r of receps">
+                <td>{{r.recepName}}</td>
+                <td>{{r.chefName}}</td>
+                <td>{{r.ingredients}}</td>
+                <td>{{r.preperation}}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>

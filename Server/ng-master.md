@@ -7,190 +7,181 @@
    npm init -y
    npm i mongoose express cors
 
-2. [Server]  App.js:  
-require("./data-access-layer/dal");
-const express = require("express");
-const cors = require("cors");
-const dishesController = require("./controllers/");
-const server = express();
-server.use(cors());
-server.use(express.json());
-server.use("/api/dishes", dishesController);
-server.listen(3000, () => console.log("Listening on http://localhost:3000"));
+2. [Server] App.js:  
+   require("./data-access-layer/dal");
+   const express = require("express");
+   const cors = require("cors");
+   const dishesController = require("./controllers/");
+   const server = express();
+   server.use(cors());
+   server.use(express.json());
+   server.use("/api/dishes", dishesController);
+   server.listen(3000, () => console.log("Listening on http://localhost:3000"));
 
-3. dal.js:
+3. [dal.js]:
+4. {MONGO}
+   const mongoose = require("mongoose");
+   function connectAsync() {
+   return new Promise((resolve, reject) => {
+   mongoose.connect("mongodb://localhost:27017/<dbName>",
+   { useNewUrlParser: true, useUnifiedTopology: true }, (err, db) => {
+   if (err) {
+   reject(err);
+   return;
+   }
+   resolve(db);
+   });
+   });
+   }
+   async function connectToDatabase() {
+   try {
+   const db = await connectAsync();
+   console.log("We're connected to " + db.name + " database on MongoDB");
+   }
+   catch (err) {
+   console.error(err);
+   }
+   }
+   connectToDatabase();
 
-031. {MONGO} 
-const mongoose = require("mongoose");
-function connectAsync() {
-    return new Promise((resolve, reject) => {
-        mongoose.connect("mongodb://localhost:27017/<dbName>",
-            { useNewUrlParser: true, useUnifiedTopology: true }, (err, db) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                resolve(db);
-            });
-    });
-}
-async function connectToDatabase() {
-    try {
-        const db = await connectAsync();
-        console.log("We're connected to " + db.name + " database on MongoDB");
-    }
-    catch (err) {
-        console.error(err);
-    }
-}
-connectToDatabase();
+5. {SQL}:
+   const mysql = require("mysql");
+   const connection = mysql.createConnection({
+   host: "localhost",
+   user: "root",
+   password: "q1w2e3",
+   database: "tourist"
+   });
+   connection.connect(err => {
+   if (err) {
+   console.error(err);
+   return;
+   }
+   console.log("We're connected to Tourist on MySQL.");
+   });
+   function executeAsync(sql) {
+   return new Promise((resolve, reject) => {
+   connection.query(sql, (err, result) => {
+   if (err) {
+   reject(err);
+   return;
+   }
+   resolve(result);
+   });
+   });
+   }
+   module.exports = {
+   executeAsync
+   };
 
-032. {SQL}:
-const mysql = require("mysql");
-const connection = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "q1w2e3",
-  database: "tourist"
-});
-connection.connect(err => {
-  if (err) {
-    console.error(err);
-    return;
-  }
-  console.log("We're connected to Tourist on MySQL.");
-});
-function executeAsync(sql) {
-  return new Promise((resolve, reject) => {
-    connection.query(sql, (err, result) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(result);
-    });
-  });
-}
-module.exports = {
-  executeAsync
-};
+6. buisness-logic/dish-logic.js:
+   const dal = require("../dal");
+   async function getAllVacsAsync() {
+   const sql = `SELECT vacationID,description, destination, picFileName, DATE_FORMAT(startDate, "%m/%d/%Y") as startDate, DATE_FORMAT(endDate, "%m/%d/%Y") as endDate, price FROM vacations`;
+   const vacs = await dal.executeAsync(sql);
+   return vacs;
+   }
+   async function getOneVacAsync(id) {
+   const sql = `SELECT vacationID,description, destination, picFileName, DATE_FORMAT(startDate, "%m/%d/%Y") as startDate, DATE_FORMAT(endDate, "%m/%d/%Y") as endDate, price FROM vacations WHERE vacationID = ${id}`;
+   const user = await dal.executeAsync(sql);
+   return user;
+   }
+   async function addVacAsync(vac) {
+   const sql = `INSERT INTO vacations (description, destination, picFileName, startDate, endDate, price, followed) VALUES('${vac.description}','${vac.destination}','${vac.picFileName}','${vac.startDate}','${vac.endDate}','${vac.price}', 0)`;
+   const info = await dal.executeAsync(sql);
+   vac.id = info.insertId;
+   return vac;
+   }
+   async function updateFullVacationAsync(vac) {
+   const sql = `UPDATE vacations SET description = '${vac.description}', destination = '${vac.destination}', picFileName = '${vac.picFileName}', startDate = '${vac.startDate}', endDate = '${vac.endDate}', price = '${vac.price}' WHERE vacationID = ${vac.id}`;
+   const info = await dal.executeAsync(sql);
+   return info.affectedRows === 0 ? null : vac;
+   }
+   async function updatePartialVacAsync(vac) {
+   let sql = "UPDATE vacations SET ";
+   if (vac.description) {
+   sql += `description = '${vac.description}',`;
+   }
+   if (vac.destination) {
+   sql += `destination = '${vac.destination}',`;
+   }
+   if (vac.picFileName) {
+   sql += `picFileName = '${vac.picFileName}',`;
+   }
+   if (vac.startDate) {
+   sql += `startDate = '${vac.startDate}',`;
+   }
+   if (vac.endDate) {
+   sql += `endDate = '${vac.endDate}',`;
+   }
+   if (vac.price) {
+   sql += `price = '${vac.price}',`;
+   }
+   sql = sql.substr(0, sql.length - 1);
+   sql += `WHERE ProductID = ${vac.id}`;
+   const info = await dal.executeAsync(sql);
+   return info.affectedRows === 0 ? null : vac;
+   }
+   async function deleteOneVacAsync(id) {
+   const sql = `DELETE FROM vacations WHERE vacationID = ${id}`;
+   await dal.executeAsync(sql);
+   }
+   module.exports = {
+   getAllVacsAsync,
+   getOneVacAsync,
+   addVacAsync,
+   updateFullVacationAsync,
+   updatePartialVacAsync,
+   deleteOneVacAsync
+   };
 
-4. buisness-logic/dish-logic.js:
-const dal = require("../dal");
-async function getAllVacsAsync() {
-  const sql = `SELECT vacationID,description, destination, picFileName, DATE_FORMAT(startDate, "%m/%d/%Y") as startDate, DATE_FORMAT(endDate, "%m/%d/%Y") as endDate, price FROM vacations`;
-  const vacs = await dal.executeAsync(sql);
-  return vacs;
-}
-async function getOneVacAsync(id) {
-  const sql = `SELECT vacationID,description, destination, picFileName, DATE_FORMAT(startDate, "%m/%d/%Y") as startDate, DATE_FORMAT(endDate, "%m/%d/%Y") as endDate, price FROM vacations WHERE vacationID = ${id}`;
-  const user = await dal.executeAsync(sql);
-  return user;
-}
-async function addVacAsync(vac) {
-  const sql = `INSERT INTO vacations (description, destination, picFileName, startDate, endDate, price, followed) VALUES('${vac.description}','${vac.destination}','${vac.picFileName}','${vac.startDate}','${vac.endDate}','${vac.price}', 0)`;
-  const info = await dal.executeAsync(sql);
-  vac.id = info.insertId;
-  return vac;
-}
-async function updateFullVacationAsync(vac) {
-  const sql = `
-      UPDATE vacations SET
-      description = '${vac.description}',
-      destination = '${vac.destination}',
-      picFileName = '${vac.picFileName}',
-      startDate = '${vac.startDate}',
-      endDate = '${vac.endDate}',
-      price = '${vac.price}'
-      WHERE vacationID = ${vac.id}`;
-  const info = await dal.executeAsync(sql);
-  return info.affectedRows === 0 ? null : vac;
-}
-async function updatePartialVacAsync(vac) {
-  let sql = "UPDATE vacations SET ";
-  if (vac.description) {
-    sql += `description = '${vac.description}',`;
-  }
-  if (vac.destination) {
-    sql += `destination = '${vac.destination}',`;
-  }
-  if (vac.picFileName) {
-    sql += `picFileName = '${vac.picFileName}',`;
-  }
-  if (vac.startDate) {
-    sql += `startDate = '${vac.startDate}',`;
-  }
-  if (vac.endDate) {
-    sql += `endDate = '${vac.endDate}',`;
-  }
-  if (vac.price) {
-    sql += `price = '${vac.price}',`;
-  }
-  sql = sql.substr(0, sql.length - 1);
-  sql += ` WHERE ProductID = ${vac.id}`;
-  const info = await dal.executeAsync(sql);
-  return info.affectedRows === 0 ? null : vac;
-}
-async function deleteOneVacAsync(id) {
-  const sql = `DELETE FROM vacations WHERE vacationID = ${id}`;
-  await dal.executeAsync(sql);
-}
-module.exports = {
-  getAllVacsAsync,
-  getOneVacAsync,
-  addVacAsync,
-  updateFullVacationAsync,
-  updatePartialVacAsync,
-  deleteOneVacAsync
-};
+7. controller/dish-logic.js:
+   const express = require("express");
+   const vacsLogic = require("../database/vacations-logic");
+   const router = express.Router();
+   // GET http://localhost:3000/api/vacations
+   router.get("/vacations", async (request, response) => {
+   try {
+   const vacs = await vacsLogic.getAllVacsAsync();
+   response.json(vacs);
+   } catch (err) {
+   response.status(500).send(err.message);
+   }
+   });
+   // GET http://localhost:3000/api/vacations/1
+   router.get("/vacations/:id", async (request, response) => {
+   try {
+   const id = +request.params.id;
+   const vac = await vacsLogic.getOneVacAsync(id);
+   response.json(vac);
+   } catch (err) {
+   response.status(500).send(err.message);
+   }
+   });
+   router.post("/vacations", async (request, response) => {
+   try {
+   const vac = request.body;
+   const addedVac = await vacsLogic.addVacAsync(vac);
+   response.status(201).json(addedVac);
+   } catch (err) {
+   response.status(500).send(err.message);
+   }
+   });
+   router.delete("/vacations/:id", async (request, response) => {
+   try {
+   const id = +request.params.id;
+   const vac = await vacsLogic.deleteOneVacAsync(id);
+   response.json(vac);
+   } catch (err) {
+   response.status(200);
+   }
+   });
+   module.exports = router;
+   _
+   ---\*\*---
+   _
 
-5. controller/dish-logic.js:
-const express = require("express");
-const vacsLogic = require("../database/vacations-logic");
-const router = express.Router();
-// GET http://localhost:3000/api/vacations
-router.get("/vacations", async (request, response) => {
-  try {
-    const vacs = await vacsLogic.getAllVacsAsync();
-    response.json(vacs);
-  } catch (err) {
-    response.status(500).send(err.message);
-  }
-});
-// GET http://localhost:3000/api/vacations/1
-router.get("/vacations/:id", async (request, response) => {
-  try {
-    const id = +request.params.id;
-    const vac = await vacsLogic.getOneVacAsync(id);
-    response.json(vac);
-  } catch (err) {
-    response.status(500).send(err.message);
-  }
-});
-router.post("/vacations", async (request, response) => {
-  try {
-    const vac = request.body;
-    const addedVac = await vacsLogic.addVacAsync(vac);
-    response.status(201).json(addedVac);
-  } catch (err) {
-    response.status(500).send(err.message);
-  }
-});
-router.delete("/vacations/:id", async (request, response) => {
-  try {
-    const id = +request.params.id;
-    const vac = await vacsLogic.deleteOneVacAsync(id);
-    response.json(vac);
-  } catch (err) {
-    response.status(200);
-  }
-});
-module.exports = router;
-_
----**---
-_
-
-[Client] ng new client --routing
+[Client] ng new Client --routing
 
 1.  DI - Dependency Injection
     זהו מצב בו הסביבה עצמה (אנגולר) יוצרת עבורנו אובייקט
@@ -216,22 +207,84 @@ _
     { path: "", redirectTo: "/home", pathMatch: "full" }, // full = exact
     { path: "**", component: PageNotFoundComponent }
     ];
-    ng g s services/getBooks --skipTests
 
-3.  Theme up components  
+3.  [MODELS] mkdir models:
+    export class DishModel {
+    public constructor(
+    public dishID: number,
+    public dishName: string
+    ) {
+    }
+    }
+
+4.  SERVICE - Fetch:  
+     ng g s services/getDishes --skipTests
+     ng g s services/getReceps --skipTests
+     **ng g s services/Receps --skipTests**
+    constructor() { }
+    public getAllProductsAsync(): Promise<DishModel[]> {
+    return new Promise<DishModel[]>((resolve, reject) => {
+    fetch("http://localhost:3000/api/dishes")
+    .then(response => response.json())
+    .then(dishes => resolve(dishes))
+    .catch(err => reject(err));
+    });
+    }
+5.  dishes component :  
+    export class DishesComponent implements OnInit {
+    public dishes: DishModel[];
+    constructor(private myDishService: GetDishesService) { }
+    async ngOnInit() {
+    try {
+    this.dishes = await this.myDishService.getAllDishesAsync();
+    console.log(this.dishes);
+    }
+    catch (err) {
+    alert("Error: " + err.message);
+    }
+    }
+    }
+ 
+
+
+6.  dishes.html:  
+<div>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Stock</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let d of dishes">
+                <td>{{d.name}}</td>
+                <td>{{d.price}}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+7.  Theme up components  
     ng g c components/layouts/layout --skipTests
     ng g c components/layouts/header --skipTests
     ng g c components/layouts/main --skipTests
     ng g c components/layouts/sidebar --skipTests
     ng g c components/layouts/footer --skipTests
     ng g c components/pages/home --skipTests
-    ng g c components/pages/restaurants --skipTests
+    ng g c components/Insert --skipTests
+    ng g c components/pages/page-not-found --skipTests
+    ng g c components/pages/dishes --skipTests |
+    ng g c components/pages/receps --skipTests |
     ng g c components/pages/about --skipTests
     ng g c components/pages/contact --skipTests
     ng g c components/pages/auth --skipTests
     ng g c components/pages/auth/login --skipTests
     ng g c components/pages/auth/logout --skipTests
     ng g c components/pages/auth/register --skipTests
+<iframe width="560" height="315" src="https://www.youtube.com/embed/t3otBjVZzT0?autoplay=1" allow="autoplay" title="Page not Found"></iframe>
+
 
 npm i --save @angular/material @angular/cdk
 
@@ -242,12 +295,61 @@ cd app/ mkdir redux
 
 3. directive guide:
 
-4. Service guide - fetch + calculate:  
-   include HttpClientModule along with import on app.ts
-   npm i rxjs
+4. template:
+<div class="container">
+  <app-header></app-header>
+  <main class="row">
+    <app-sidebar class="col-one"></app-sidebar>
+    <section class="col-two">
+      <router-outlet></router-outlet>
+    </section>
+  </main>
+  <app-footer></app-footer>
+</div>
+
+5. layout.css:  
+   .container {
+   max-width: 90%;
+   margin: 0 auto;
+   }
+   .row {
+   display: flex;
+   }
+   .col {
+   flex: 1;
+   }
+   .col-one {
+   flex: 1 1 auto;
+   }
+   .col-two {
+   flex: 2 1 auto;
+   min-height:60vh;
+   }
+
+6. insert Service:  
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { RecepModel } from 'src/app/models/recep-model';
+import { DishModel } from 'src/app/models/dish-model';
+@Injectable({
+  providedIn: 'root'
+})
+export class InsertComponent {
+  constructor(private http: HttpClient) { }
+  public getAllReceps(): Observable<RecepModel[]> {
+    return this.http.get<RecepModel[]>("http://localhost:3000/api/receps");
+}
+public getAllDishes(): Observable<DishModel[]> {
+  return this.http.get<DishModel[]>("http://localhost:3000/api/dishes");
+}
+public addRecep(recep: RecepModel): Observable<RecepModel> {
+  return this.http.post<RecepModel>("http://localhost:3000/api/receps", recep);
+}
+}
 
 \_
-   --------------------[PROJECT]
+--------------------[PROJECT]
 
 3. [REDUX] info:
    ארכיטקטורה המנהלת מידע ברמת האפליקציה והמאפשרת להחזיק את המידע במקום אחד. המידע נקרא ב-AppState.
@@ -310,12 +412,12 @@ cd app/ mkdir redux
    export const store = createStore(reducer, new AppState())
 
 9. {assignments}:
-LAZY LOAD
-REDUX
-RXJS
-DIRECTIVE
-SERVICES
+   LAZY LOAD
+   REDUX
+   RXJS
+   DIRECTIVE
+   SERVICES
 
-7. Questions for Assaf / other:  
-   **in angular, redux- how to unsubscribe?
-   **global variable import in angular client such as port
+10. Questions for Assaf / other:  
+    **in angular, redux- how to unsubscribe?
+    **global variable import in angular client such as port
